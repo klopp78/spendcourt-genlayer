@@ -2,7 +2,7 @@ import { createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
 import { TransactionHashVariant, TransactionStatus } from "genlayer-js/types";
 
-export const SPEND_COURT_CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_SPEND_COURT_CONTRACT_ADDRESS ?? "0x0000000000000000000000000000000000000000") as `0x${string}`;
+export const SPEND_COURT_CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_SPEND_COURT_CONTRACT_ADDRESS ?? "0x68d89833AEa1263d7D2BFD6cAe9120C501B71318") as `0x${string}`;
 export type WalletAddress = `0x${string}`;
 const client = (account?: WalletAddress) => createClient({ chain: studionet, account });
 const address = (override?: WalletAddress) => override ?? SPEND_COURT_CONTRACT_ADDRESS;

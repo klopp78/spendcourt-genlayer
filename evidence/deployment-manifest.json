@@ -1,0 +1,9 @@
+{
+  "network": "GenLayer Studio",
+  "contractAddress": "0x68d89833AEa1263d7D2BFD6cAe9120C501B71318",
+  "deploymentTransaction": "0x90c7b65b5d386d179f96c527f6b2e20e7b3d260c5d03bba08914317d861d4739",
+  "sourceFile": "contracts/spend_court.py",
+  "sourceSha256": "92cc74b056e31bd023093e0c15f8f9fa5c6ab76bfb746E895ED94785E66C0CD0",
+  "sourceCommit": "52464cc782812e0d84e3fcb4329336d7a51e407b",
+  "status": "FINALIZED"
+}

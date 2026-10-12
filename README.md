@@ -28,7 +28,8 @@ Completion is quantized to `0`, `25%`, `50%`, `75%`, or `100%`. The authorized a
 
 - Contract source: `contracts/spend_court.py`
 - Interactive application: https://klopp78.github.io/spendcourt-genlayer/
-- Contract explorer: added after Studio deployment
+- Contract explorer: https://explorer-studio.genlayer.com/address/0x68d89833AEa1263d7D2BFD6cAe9120C501B71318
+- Deployment transaction: https://explorer-studio.genlayer.com/tx/0x90c7b65b5d386d179f96c527f6b2e20e7b3d260c5d03bba08914317d861d4739
 - Example materials: `examples/`
 
 ## Verification
