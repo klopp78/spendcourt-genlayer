@@ -1,0 +1,10 @@
+.next/
+.vinext/
+.wrangler/
+dist/
+pages-dist/
+node_modules/
+.env*
+!.env.example
+*.log
+
