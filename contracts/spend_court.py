@@ -383,7 +383,7 @@ Complete delivery evidence: {_canonical_json(snapshots)}
         "evidence_complete": _strict_bool(data, "evidence_complete"),
         "evidence_bundle_hash": str(data["evidence_bundle_hash"]),
         "assessment_context_hash": context_hash, "snapshot_commitments": commitments,
-        "summary": _text(str(data["summary"]), 500, "summary_required"),
+        "summary": _optional_summary(data, "Validator-authenticated delivery assessment."),
     }
     _validate_delivery_result(result)
     return _canonical_json(result)
@@ -413,7 +413,7 @@ Complete payment evidence: {_canonical_json(snapshots)}
         "receipt_match": _strict_bool(data, "receipt_match"),
         "payment_reference": _text(str(data["payment_reference"]), 180, "payment_reference_required"),
         "payment_snapshot_hash": str(data["payment_snapshot_hash"]),
-        "summary": _text(str(data["summary"]), 500, "summary_required"),
+        "summary": _optional_summary(data, "Validator-authenticated payment assessment."),
     }
     if result["payment_snapshot_hash"] != payment_bundle_hash:
         raise Exception("payment_snapshot_hash_mismatch")
@@ -597,6 +597,14 @@ def _strict_bool(data: dict, key: str) -> bool:
     if type(value) is not bool:
         raise Exception("invalid_boolean_" + key)
     return value
+
+
+def _optional_summary(data: dict, fallback: str) -> str:
+    """Keep narrative metadata optional; consensus-critical fields remain mandatory."""
+    value = str(data.get("summary", "")).strip()
+    if not value:
+        return fallback
+    return _text(value, 500, "summary_too_long")
 
 
 def _invoice_key(order_id: str, invoice_number: str) -> str:
