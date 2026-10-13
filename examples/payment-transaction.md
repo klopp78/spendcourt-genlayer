@@ -1,6 +1,6 @@
 # Acceptance report
 
-Invoice SC-2026-001 for order `ord_bfb0ff29d5b25ed4f6eb` is accepted against the frozen service mandate.
+Invoice SC-2026-001 for order `ord_d27f44751cf83cb07e7f` is accepted against the frozen service mandate.
 
 - Scope: production incident report
 - Executing agent: 0xE22D4Dc6865BD451411479D3A146EAFBd87D156B
