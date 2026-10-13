@@ -480,7 +480,13 @@ def _validate_delivery_result(data: dict):
 def _render_sources(sources):
     snapshots = []
     for source in sources:
-        rendered = gl.nondet.web.render(source["canonical_url"], mode="text")
+        if source["host"] == "raw.githubusercontent.com":
+            response = gl.nondet.web.get(source["canonical_url"])
+            if response.status_code != 200:
+                raise Exception("evidence_source_unavailable")
+            rendered = response.body.decode("utf-8")
+        else:
+            rendered = gl.nondet.web.render(source["canonical_url"], mode="text")
         if len(rendered) < MIN_SOURCE_CHARS:
             raise Exception("evidence_source_incomplete")
         if len(rendered) > MAX_SOURCE_CHARS:
@@ -537,6 +543,9 @@ def _source(index: int, source_type: str, raw_url: str) -> dict:
         revision = parts[1].lower().removeprefix("0x")
     if len(revision) != 40 or any(char not in "0123456789abcdef" for char in revision):
         raise Exception("source_requires_immutable_git_commit_url")
+    if host == "github.com" and parts[2] == "blob":
+        host = "raw.githubusercontent.com"
+        parts = [parts[0], parts[1], parts[3]] + parts[4:]
     canonical = "https://" + host + "/" + "/".join(parts)
     return {
         "source_index": index, "source_type": source_type, "host": host,
