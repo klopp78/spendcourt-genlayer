@@ -6,6 +6,7 @@ expect(/class\s+SpendCourt\s*\(gl\.Contract\)/.test(source), "missing SpendCourt
 for (const method of ["register_order", "assess_delivery", "finalize_receipt", "execute_settlement", "get_order", "get_assessment", "get_settlement", "get_invoice_record"]) expect(new RegExp(`def\\s+${method}\\s*\\(`).test(source), `missing ${method}`);
 for (const marker of ["gl.vm.run_nondet_unsafe", "gl.nondet.web.get", "gl.nondet.web.render", "gl.nondet.exec_prompt", "hashlib.sha256", "snapshot_commitments", "baseline_hash", "assessment_context_hash", "invoice_already_assessed", "evidence_bundle_already_assessed", "reserved_amount", "deadline_timestamp", "time.time()", "_strict_bool", "downstream_payment_not_verified", "source_requires_immutable_git_commit_url", "noncustodial_verified_downstream_payment", "raw.githubusercontent.com", "explorer-studio.genlayer.com", "payment_manifest", "payment_transaction"]) expect(source.includes(marker), `missing integrity marker: ${marker}`);
 expect(!source.includes("gl.block.timestamp"), "unsupported block timestamp API is forbidden");
+expect(!source.includes("response.status_code"), "unsupported GenVM response status accessor is forbidden");
 expect(!source.includes("[:7000]"), "decision evidence must never be silently truncated");
 expect(!source.includes("contract_state_credit_to_payee"), "internal ledger must not be represented as a payment");
 expect(!/\bhash\s*\(/.test(source), "non-deterministic Python hash is forbidden");

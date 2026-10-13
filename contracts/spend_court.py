@@ -482,8 +482,6 @@ def _render_sources(sources):
     for source in sources:
         if source["host"] == "raw.githubusercontent.com":
             response = gl.nondet.web.get(source["canonical_url"])
-            if response.status_code != 200:
-                raise Exception("evidence_source_unavailable")
             rendered = response.body.decode("utf-8")
         else:
             rendered = gl.nondet.web.render(source["canonical_url"], mode="text")
