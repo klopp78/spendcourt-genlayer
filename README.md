@@ -11,7 +11,7 @@ A conventional smart contract can enforce a numeric cap but cannot decide whethe
 1. `register_order` fetches and commits the mandate, acceptance policy, and repository baseline.
 2. `assess_delivery` independently renders four evidence sources and compares every consequential verdict field across validators.
 3. `finalize_receipt` lets only the payer reserve budget for a positive assessment.
-4. `execute_settlement` verifies a commit-pinned downstream payment record against payer, payee, amount, currency, and authorization receipt before recording settlement.
+4. `execute_settlement` cross-checks a commit-pinned payment manifest with the authoritative Studio Explorer transaction against payer, payee, amount, currency, and authorization receipt before recording settlement.
 
 Completion is quantized to `0`, `25%`, `50%`, `75%`, or `100%`. The authorized amount is deterministically capped by the requested amount and remaining order budget.
 

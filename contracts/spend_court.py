@@ -249,7 +249,10 @@ class SpendCourt(gl.Contract):
         return assessment["authorization_receipt_hash"]
 
     @gl.public.write
-    def execute_settlement(self, order_id: str, assessment_id: str, payment_execution_url: str) -> str:
+    def execute_settlement(
+        self, order_id: str, assessment_id: str,
+        payment_manifest_url: str, payment_transaction_url: str,
+    ) -> str:
         order = _load(self.orders.get(order_id, ""), "order_not_found")
         assessment = _load(self.assessments.get(assessment_id, ""), "assessment_not_found")
         caller = str(gl.message.sender_address).lower()
@@ -265,17 +268,20 @@ class SpendCourt(gl.Contract):
         amount = int(assessment["authorized_amount"])
         if amount <= 0 or amount > int(order["reserved_amount"]):
             raise Exception("settlement_exceeds_reserved_boundary")
-        payment_source = _source(1, "payment_execution", payment_execution_url)
+        payment_sources = [
+            _source(1, "payment_manifest", payment_manifest_url),
+            _source(2, "payment_transaction", payment_transaction_url),
+        ]
 
         def leader_fn():
-            return _verify_payment_execution(order, assessment, payment_source)
+            return _verify_payment_execution(order, assessment, payment_sources)
 
         def validator_fn(leader_result) -> bool:
             if not isinstance(leader_result, gl.vm.Return):
                 return False
             try:
                 proposed = _parse_payment_verdict(leader_result.calldata)
-                independent = _parse_payment_verdict(_verify_payment_execution(order, assessment, payment_source))
+                independent = _parse_payment_verdict(_verify_payment_execution(order, assessment, payment_sources))
             except Exception:
                 return False
             return proposed == independent
@@ -382,19 +388,21 @@ Complete delivery evidence: {_canonical_json(snapshots)}
     return _canonical_json(result)
 
 
-def _verify_payment_execution(order: dict, assessment: dict, source: dict) -> str:
-    snapshot = _render_sources([source])[0]
+def _verify_payment_execution(order: dict, assessment: dict, sources) -> str:
+    snapshots = _render_sources(sources)
+    payment_bundle_hash = _sha256(_canonical_json(_snapshot_commitments(sources, snapshots)))
     prompt = f"""
 Verify a downstream payment execution record for a noncustodial authorization protocol.
 Return only minified JSON with keys: payment_verified, payer_match, payee_match, amount_match,
 currency_match, receipt_match, payment_reference, payment_snapshot_hash, summary. Every match
 field must be a JSON boolean. payment_verified may be true only if all match fields are true
-and the complete immutable record proves a successful, non-reverted payment from payer
+and the commit-pinned manifest plus authoritative Studio Explorer transaction prove a
+successful, non-reverted payment from payer
 {order['payer']} to payee {order['payee']} for exactly {assessment['authorized_amount']}
 {order['currency']}, tied to authorization receipt {assessment['authorization_receipt_hash']}.
-payment_snapshot_hash must equal {snapshot['snapshot_hash']}.
+payment_snapshot_hash must equal {payment_bundle_hash}.
 
-Complete payment execution record: {_canonical_json(snapshot)}
+Complete payment evidence: {_canonical_json(snapshots)}
 """
     data = json.loads(gl.nondet.exec_prompt(prompt))
     result = {
@@ -406,7 +414,7 @@ Complete payment execution record: {_canonical_json(snapshot)}
         "payment_snapshot_hash": str(data["payment_snapshot_hash"]),
         "summary": _text(str(data["summary"]), 500, "summary_required"),
     }
-    if result["payment_snapshot_hash"] != snapshot["snapshot_hash"]:
+    if result["payment_snapshot_hash"] != payment_bundle_hash:
         raise Exception("payment_snapshot_hash_mismatch")
     matches = [result[key] for key in ("payer_match", "payee_match", "amount_match", "currency_match", "receipt_match")]
     if result["payment_verified"] is not all(matches):
@@ -524,6 +532,8 @@ def _source(index: int, source_type: str, raw_url: str) -> dict:
         revision = parts[3].lower()
     elif host == "raw.githubusercontent.com" and len(parts) >= 4:
         revision = parts[2].lower()
+    elif host == "explorer-studio.genlayer.com" and len(parts) == 2 and parts[0] == "tx":
+        revision = parts[1].lower().removeprefix("0x")
     if len(revision) != 40 or any(char not in "0123456789abcdef" for char in revision):
         raise Exception("source_requires_immutable_git_commit_url")
     canonical = "https://" + host + "/" + "/".join(parts)
