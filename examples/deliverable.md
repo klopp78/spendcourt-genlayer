@@ -1,3 +1,3 @@
 # Delivered incident report
 
-The requested incident report is complete. It contains a verified UTC timeline, links to two independent sources, impact classification, resolution notes, and a valid machine-readable appendix.
+Order `ord_bfb0ff29d5b25ed4f6eb` is complete. The incident report contains a verified UTC timeline, links to two independent sources, impact classification, resolution notes, and a valid machine-readable JSON appendix.
