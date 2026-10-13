@@ -1,6 +1,6 @@
 # SpendCourt for GenLayer
 
-SpendCourt is a GenLayer-native settlement console for delegated AI-agent work. A payer freezes a service mandate, budget, deadline, and acceptance policy before execution. Validators later authenticate the invoice, execution log, deliverable, and payment intent, then issue a durable receipt that authorizes no more than the independently assessed completion amount.
+SpendCourt is a GenLayer-native, noncustodial payment-authorization protocol for delegated AI-agent work. A payer freezes a service mandate, budget, deadline, and acceptance policy before execution. Validators authenticate delivery evidence, issue a bounded authorization receipt, and independently verify the downstream payment record before the order is marked settled.
 
 ## Why GenLayer
 
@@ -10,8 +10,8 @@ A conventional smart contract can enforce a numeric cap but cannot decide whethe
 
 1. `register_order` fetches and commits the mandate, acceptance policy, and repository baseline.
 2. `assess_delivery` independently renders four evidence sources and compares every consequential verdict field across validators.
-3. `finalize_receipt` lets only the payer convert a positive assessment into an executable authorization receipt.
-4. `execute_settlement` refuses missing, blocked, repeated, or over-budget receipts and credits the payee ledger.
+3. `finalize_receipt` lets only the payer reserve budget for a positive assessment.
+4. `execute_settlement` verifies a commit-pinned downstream payment record against payer, payee, amount, currency, and authorization receipt before recording settlement.
 
 Completion is quantized to `0`, `25%`, `50%`, `75%`, or `100%`. The authorized amount is deterministically capped by the requested amount and remaining order budget.
 
@@ -20,9 +20,14 @@ Completion is quantized to `0`, `25%`, `50%`, `75%`, or `100%`. The authorized a
 - SHA-256 commitments over canonical JSON, URLs, frozen terms, and rendered snapshots
 - validator recomputation of every decision-critical field and source hash
 - immutable baseline terms used during every later assessment
-- explicit payer finalization before settlement
-- persistent order, assessment, settlement, and payee-claim records
-- finalized transaction wait and `LATEST_FINAL` readback in the application
+- invoice and evidence-bundle replay protection
+- reservation and cumulative settlement accounting across every order and invoice
+- enforced on-chain deadlines for assessment, finalization, and payment verification
+- strict JSON boolean parsing and consistency rules for every positive verdict
+- complete commit-pinned evidence snapshots with no silent source truncation
+- exact GenVM `FINISHED_WITH_RETURN` checks and `LATEST_FINAL` readback in the application
+
+SpendCourt never claims that an internal accounting entry moved money. Funds move through an external payment rail; the contract records settlement only after validators authenticate the resulting execution proof.
 
 ## Evidence
 

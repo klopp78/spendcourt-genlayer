@@ -1,6 +1,6 @@
 import { createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
-import { TransactionHashVariant, TransactionStatus } from "genlayer-js/types";
+import { ExecutionResult, TransactionHashVariant, TransactionStatus } from "genlayer-js/types";
 
 export const SPEND_COURT_CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_SPEND_COURT_CONTRACT_ADDRESS ?? "0x68d89833AEa1263d7D2BFD6cAe9120C501B71318") as `0x${string}`;
 export type WalletAddress = `0x${string}`;
@@ -14,6 +14,9 @@ async function write(walletAddress: WalletAddress, functionName: string, args: s
   const connected = client(walletAddress); await connected.connect("studionet");
   const hash = await connected.writeContract({ address: address(contractAddress), functionName, args, value: BigInt(0), leaderOnly: false });
   const receipt = await connected.waitForTransactionReceipt({ hash, status: TransactionStatus.FINALIZED, fullTransaction: true });
+  if ((receipt as { txExecutionResultName?: ExecutionResult }).txExecutionResultName !== ExecutionResult.FINISHED_WITH_RETURN) {
+    throw new Error("Transaction finalized without GenVM SUCCESS");
+  }
   return { hash, receipt };
 }
 export const getOrder = (id: string, contractAddress?: WalletAddress) => read("get_order", [id], contractAddress);
@@ -22,4 +25,4 @@ export const getSettlement = (id: string, contractAddress?: WalletAddress) => re
 export const registerOrder = (wallet: WalletAddress, args: string[], contractAddress?: WalletAddress) => write(wallet, "register_order", args, contractAddress);
 export const assessDelivery = (wallet: WalletAddress, args: string[], contractAddress?: WalletAddress) => write(wallet, "assess_delivery", args, contractAddress);
 export const finalizeReceipt = (wallet: WalletAddress, orderId: string, assessmentId: string, contractAddress?: WalletAddress) => write(wallet, "finalize_receipt", [orderId, assessmentId], contractAddress);
-export const executeSettlement = (wallet: WalletAddress, orderId: string, assessmentId: string, contractAddress?: WalletAddress) => write(wallet, "execute_settlement", [orderId, assessmentId], contractAddress);
+export const executeSettlement = (wallet: WalletAddress, orderId: string, assessmentId: string, paymentExecutionUrl: string, contractAddress?: WalletAddress) => write(wallet, "execute_settlement", [orderId, assessmentId, paymentExecutionUrl], contractAddress);

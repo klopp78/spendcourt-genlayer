@@ -1,6 +1,6 @@
 import { createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
-import { TransactionHashVariant, TransactionStatus } from "genlayer-js/types";
+import { ExecutionResult, TransactionHashVariant, TransactionStatus } from "genlayer-js/types";
 import "./styles.css";
 
 type Ethereum = { request(args: { method: string; params?: unknown[] }): Promise<unknown> };
@@ -24,16 +24,18 @@ async function write(functionName: string, args: string[], idPattern?: RegExp) {
   setStatus(`Submitting ${functionName} to full validator consensus...`, "SUBMITTING");
   const hash = await client.writeContract({ address: contract(), functionName, args, value: BigInt(0), leaderOnly: false }); $("tx").textContent = short(hash); setStatus(`Transaction ${short(hash)} submitted. Waiting for finality...`, "CONSENSUS");
   const receipt = await client.waitForTransactionReceipt({ hash, status: TransactionStatus.FINALIZED, interval: 3000, retries: 120, fullTransaction: true } as never);
-  const id = idPattern ? extract(receipt, idPattern) : ""; setOutput(receipt); setStatus(id ? `Finalized. Contract returned ${id}.` : "Transaction finalized successfully.", "FINALIZED"); return id;
+  const result = (receipt as { txExecutionResultName?: ExecutionResult }).txExecutionResultName;
+  if (result !== ExecutionResult.FINISHED_WITH_RETURN) throw new Error(`Transaction finalized without GenVM success (${String(result ?? "unknown")}).`);
+  const id = idPattern ? extract(receipt, idPattern) : ""; setOutput(receipt); setStatus(id ? `GenVM SUCCESS. Contract returned ${id}.` : "GenVM execution succeeded.", "SUCCESS"); return id;
 }
 async function read(functionName: string, id: string) { setStatus(`Reading ${functionName} from LATEST_FINAL...`, "READBACK"); const value = await readClient().readContract({ address: contract(), functionName, args: [id], jsonSafeReturn: true, leaderOnly: true, transactionHashVariant: TransactionHashVariant.LATEST_FINAL }); const text = typeof value === "string" ? value : JSON.stringify(value); setOutput(JSON.parse(text || "{}")); setStatus(`Loaded ${id} from finalized contract state.`, "SUCCESS"); }
 
 document.querySelectorAll<HTMLButtonElement>(".tab").forEach((tab) => tab.addEventListener("click", () => { document.querySelectorAll(".tab,.view").forEach((node) => node.classList.remove("active")); tab.classList.add("active"); $(tab.dataset.tab!).classList.add("active"); }));
 $("connect").addEventListener("click", () => connect().catch((error) => setStatus(message(error), "FAILED")));
-$("order").addEventListener("submit", (event) => { event.preventDefault(); write("register_order", [input("service-title"), input("agent"), input("payee"), input("currency"), input("budget"), input("deadline"), input("mandate"), input("policy"), input("repository")], /ord_[a-f0-9]{20}/).then((id) => { if (id) { $("order-id").textContent = id; ($("assessment-order") as HTMLInputElement).value = id; ($("settle-order") as HTMLInputElement).value = id; } }).catch((error) => setStatus(message(error), "FAILED")); });
+$("order").addEventListener("submit", (event) => { event.preventDefault(); const deadline = Math.floor(Date.parse(input("deadline")) / 1000); if (!Number.isFinite(deadline)) { setStatus("Enter a valid UTC deadline.", "FAILED"); return; } write("register_order", [input("service-title"), input("agent"), input("payee"), input("currency"), input("budget"), String(deadline), input("mandate"), input("policy"), input("repository")], /ord_[a-f0-9]{20}/).then((id) => { if (id) { $("order-id").textContent = id; ($("assessment-order") as HTMLInputElement).value = id; ($("settle-order") as HTMLInputElement).value = id; } }).catch((error) => setStatus(message(error), "FAILED")); });
 $("assessment").addEventListener("submit", (event) => { event.preventDefault(); write("assess_delivery", [input("assessment-order"), input("invoice-number"), input("requested"), input("invoice-url"), input("execution-url"), input("deliverable-url"), input("payment-url")], /sct_[a-f0-9]{20}/).then((id) => { if (id) { $("assessment-id").textContent = id; ($("settle-assessment") as HTMLInputElement).value = id; } }).catch((error) => setStatus(message(error), "FAILED")); });
 $("finalize").addEventListener("click", () => write("finalize_receipt", [input("settle-order"), input("settle-assessment")]).catch((error) => setStatus(message(error), "FAILED")));
-$("execute").addEventListener("click", () => write("execute_settlement", [input("settle-order"), input("settle-assessment")]).catch((error) => setStatus(message(error), "FAILED")));
+$("execute").addEventListener("click", () => write("execute_settlement", [input("settle-order"), input("settle-assessment"), input("payment-execution-url")]).catch((error) => setStatus(message(error), "FAILED")));
 $("read-order").addEventListener("click", () => read("get_order", input("record-id")).catch((error) => setStatus(message(error), "FAILED")));
 $("read-assessment").addEventListener("click", () => read("get_assessment", input("record-id")).catch((error) => setStatus(message(error), "FAILED")));
 $("read-settlement").addEventListener("click", () => read("get_settlement", input("record-id")).catch((error) => setStatus(message(error), "FAILED")));

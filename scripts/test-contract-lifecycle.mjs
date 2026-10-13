@@ -1,27 +1,93 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+
 const PAYER = "0x1111111111111111111111111111111111111111";
 const AGENT = "0x2222222222222222222222222222222222222222";
 const PAYEE = "0x3333333333333333333333333333333333333333";
+const OUTSIDER = "0x4444444444444444444444444444444444444444";
 const sha = (value) => createHash("sha256").update(value).digest("hex");
+
 class SpendCourtModel {
-  constructor() { this.orders = new Map(); this.assessments = new Map(); this.settlements = new Map(); }
-  register() { const id = `ord_${sha("immutable baseline").slice(0, 20)}`; this.orders.set(id, { payer: PAYER, agent: AGENT, payee: PAYEE, maximum_budget: 1000, remaining_budget: 1000, settled_amount: 0, state: "open", baseline: { baseline_hash: sha("terms and policy") } }); return id; }
-  assess(orderId, requested, completionBps, caller = AGENT) { const order = this.orders.get(orderId); if (![order.payer, order.agent, order.payee].includes(caller)) throw new Error("only_order_party_can_request_assessment"); if (requested > order.remaining_budget) throw new Error("requested_amount_exceeds_remaining_budget"); const authorized = Math.min(requested, order.remaining_budget, Math.floor(requested * completionBps / 10000)); const id = `sct_${sha(`${orderId}|${requested}|${completionBps}`).slice(0, 20)}`; this.assessments.set(id, { order_id: orderId, requested_amount: requested, authorized_amount: authorized, completion_bps: completionBps, state: authorized ? "assessed" : "blocked", settlement_ready: false, evidence_bundle_hash: sha("four snapshots") }); return id; }
-  finalize(orderId, assessmentId, caller = PAYER) { const order = this.orders.get(orderId); const receipt = this.assessments.get(assessmentId); if (caller !== order.payer) throw new Error("only_payer_can_finalize"); if (receipt.state !== "assessed") throw new Error("assessment_not_authorizable"); receipt.state = "finalized"; receipt.settlement_ready = true; receipt.authorization_receipt_hash = sha(JSON.stringify(receipt)); }
-  execute(orderId, assessmentId) { const order = this.orders.get(orderId); const receipt = this.assessments.get(assessmentId); if (receipt.state !== "finalized" || !receipt.settlement_ready) throw new Error("settlement_requires_finalized_receipt"); if (this.settlements.has(assessmentId)) throw new Error("settlement_already_executed"); if (receipt.authorized_amount > order.remaining_budget) throw new Error("settlement_exceeds_spending_boundary"); order.remaining_budget -= receipt.authorized_amount; order.settled_amount += receipt.authorized_amount; receipt.state = "executed"; receipt.settlement_ready = false; this.settlements.set(assessmentId, { status: "executed", executed_amount: receipt.authorized_amount, remaining_budget: order.remaining_budget, transfer_mechanism: "contract_state_credit_to_payee" }); }
+  constructor(now = 1_800_000_000) {
+    this.now = now;
+    this.orders = new Map();
+    this.assessments = new Map();
+    this.settlements = new Map();
+    this.invoices = new Map();
+    this.evidence = new Set();
+  }
+  register(deadline = this.now + 3600) {
+    if (deadline <= this.now) throw new Error("deadline_must_be_in_future");
+    const id = `ord_${sha(String(deadline)).slice(0, 20)}`;
+    this.orders.set(id, { payer: PAYER, agent: AGENT, payee: PAYEE, remaining: 1000, reserved: 0, settled: 0, deadline, state: "open" });
+    return id;
+  }
+  active(order) {
+    if (this.now > order.deadline) throw new Error("order_deadline_expired");
+  }
+  assess(orderId, invoice, evidenceKey, requested, completionBps, caller = AGENT) {
+    const order = this.orders.get(orderId);
+    this.active(order);
+    if (![order.payer, order.agent, order.payee].includes(caller)) throw new Error("only_order_party");
+    const invoiceKey = sha(`${orderId}|${invoice.toLowerCase()}`);
+    if (this.invoices.has(invoiceKey)) throw new Error("invoice_already_assessed");
+    if (this.evidence.has(evidenceKey)) throw new Error("evidence_bundle_already_assessed");
+    if (requested > order.remaining - order.reserved) throw new Error("exceeds_available_budget");
+    const authorized = Math.floor(requested * completionBps / 10000);
+    const id = `sct_${sha(invoiceKey + evidenceKey).slice(0, 20)}`;
+    this.assessments.set(id, { orderId, invoiceKey, authorized, state: authorized ? "assessed" : "blocked" });
+    this.invoices.set(invoiceKey, { assessmentId: id, authorized, settled: 0 });
+    this.evidence.add(evidenceKey);
+    return id;
+  }
+  finalize(orderId, assessmentId, caller = PAYER) {
+    const order = this.orders.get(orderId);
+    const receipt = this.assessments.get(assessmentId);
+    this.active(order);
+    if (caller !== order.payer) throw new Error("only_payer_can_finalize");
+    if (receipt.state !== "assessed") throw new Error("assessment_not_authorizable");
+    if (receipt.authorized > order.remaining - order.reserved) throw new Error("exceeds_available_budget");
+    order.reserved += receipt.authorized;
+    receipt.state = "finalized";
+  }
+  execute(orderId, assessmentId, paymentVerified, caller = PAYER) {
+    const order = this.orders.get(orderId);
+    const receipt = this.assessments.get(assessmentId);
+    this.active(order);
+    if (caller !== order.payer) throw new Error("only_payer_can_confirm_payment");
+    if (receipt.state !== "finalized") throw new Error("settlement_requires_finalized_receipt");
+    if (!paymentVerified) throw new Error("downstream_payment_not_verified");
+    order.remaining -= receipt.authorized;
+    order.reserved -= receipt.authorized;
+    order.settled += receipt.authorized;
+    receipt.state = "settled";
+    this.invoices.get(receipt.invoiceKey).settled += receipt.authorized;
+    this.settlements.set(assessmentId, { status: "verified", amount: receipt.authorized });
+  }
 }
+
 const model = new SpendCourtModel();
+assert.throws(() => model.register(model.now), /deadline_must_be_in_future/);
 const order = model.register();
-assert.throws(() => model.assess(order, 100, 10000, "0x4444444444444444444444444444444444444444"), /only_order_party/);
-assert.throws(() => model.assess(order, 1001, 10000), /exceeds_remaining/);
-const blocked = model.assess(order, 500, 0);
+assert.throws(() => model.assess(order, "INV-X", "proof-x", 100, 10000, OUTSIDER), /only_order_party/);
+const blocked = model.assess(order, "INV-0", "proof-0", 100, 0);
 assert.throws(() => model.finalize(order, blocked), /not_authorizable/);
-const partial = model.assess(order, 800, 7500);
-assert.equal(model.assessments.get(partial).authorized_amount, 600);
-assert.throws(() => model.finalize(order, partial, AGENT), /only_payer/);
-model.finalize(order, partial); model.execute(order, partial);
-assert.equal(model.orders.get(order).remaining_budget, 400);
-assert.equal(model.settlements.get(partial).executed_amount, 600);
-assert.throws(() => model.execute(order, partial), /requires_finalized/);
-console.log("SpendCourt lifecycle tests passed");
+const first = model.assess(order, "INV-1", "proof-1", 600, 10000);
+assert.throws(() => model.assess(order, "INV-1", "proof-2", 600, 10000), /invoice_already_assessed/);
+assert.throws(() => model.assess(order, "INV-2", "proof-1", 600, 10000), /evidence_bundle_already_assessed/);
+assert.throws(() => model.finalize(order, first, AGENT), /only_payer/);
+model.finalize(order, first);
+assert.equal(model.orders.get(order).reserved, 600);
+assert.throws(() => model.assess(order, "INV-3", "proof-3", 500, 10000), /exceeds_available_budget/);
+assert.throws(() => model.execute(order, first, false), /payment_not_verified/);
+assert.throws(() => model.execute(order, first, true, AGENT), /only_payer/);
+model.execute(order, first, true);
+assert.equal(model.orders.get(order).remaining, 400);
+assert.equal(model.orders.get(order).reserved, 0);
+assert.equal(model.orders.get(order).settled, 600);
+assert.equal(model.invoices.get(model.assessments.get(first).invoiceKey).settled, 600);
+assert.throws(() => model.execute(order, first, true), /requires_finalized/);
+const expired = model.register(model.now + 1);
+model.now += 2;
+assert.throws(() => model.assess(expired, "INV-LATE", "proof-late", 10, 10000), /deadline_expired/);
+console.log("SpendCourt v2 lifecycle and negative-path tests passed");
