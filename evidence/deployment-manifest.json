@@ -10,5 +10,12 @@
     "sourceFile": "contracts/spendcourt_payment_relay.py",
     "sourceCommit": "da5c07d9184c25171a013d19ffc05064bedde337",
     "status": "FINALIZED"
+  },
+  "verifiedSettlement": {
+    "orderId": "ord_2f48c590dae5156399e2",
+    "assessmentId": "sct_46527ba0ffe07e7bbbbf",
+    "transaction": "0xce5be449bf2753df7bed204e2466fa96525b007cdc82a5a726b37243247136de",
+    "transactionUrl": "https://explorer-studio.genlayer.com/tx/0xce5be449bf2753df7bed204e2466fa96525b007cdc82a5a726b37243247136de",
+    "status": "FINALIZED"
   }
 }
