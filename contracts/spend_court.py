@@ -373,7 +373,7 @@ evidence_bundle_hash must equal {evidence_bundle_hash}.
 Immutable context: {_canonical_json(context)}
 Complete delivery evidence: {_canonical_json(snapshots)}
 """
-    data = json.loads(gl.nondet.exec_prompt(prompt))
+    data = _prompt_json(prompt)
     result = {
         "decision": str(data["decision"]).lower(), "completion_bps": int(data["completion_bps"]),
         "confidence": int(data["confidence"]), "scope_match": _strict_bool(data, "scope_match"),
@@ -405,7 +405,7 @@ payment_snapshot_hash must equal {payment_bundle_hash}.
 
 Complete payment evidence: {_canonical_json(snapshots)}
 """
-    data = json.loads(gl.nondet.exec_prompt(prompt))
+    data = _prompt_json(prompt)
     result = {
         "payment_verified": _strict_bool(data, "payment_verified"),
         "payer_match": _strict_bool(data, "payer_match"), "payee_match": _strict_bool(data, "payee_match"),
@@ -605,6 +605,26 @@ def _optional_summary(data: dict, fallback: str) -> str:
     if not value:
         return fallback
     return _text(value, 500, "summary_too_long")
+
+
+def _prompt_json(prompt: str) -> dict:
+    """Retry transient empty provider responses without weakening result validation."""
+    last_error = "empty_response"
+    for _ in range(3):
+        raw = str(gl.nondet.exec_prompt(prompt)).strip()
+        if not raw:
+            continue
+        if raw.startswith("```"):
+            lines = raw.splitlines()
+            raw = "\n".join(lines[1:-1]).strip()
+        try:
+            value = json.loads(raw)
+            if type(value) is not dict:
+                raise Exception("response_not_object")
+            return value
+        except Exception as error:
+            last_error = str(error)
+    raise Exception("invalid_model_json:" + last_error)
 
 
 def _invoice_key(order_id: str, invoice_number: str) -> str:
