@@ -1,9 +1,14 @@
 {
   "network": "GenLayer Studio",
-  "contractAddress": "0x68d89833AEa1263d7D2BFD6cAe9120C501B71318",
-  "deploymentTransaction": "0x90c7b65b5d386d179f96c527f6b2e20e7b3d260c5d03bba08914317d861d4739",
+  "contractAddress": "0xA271d91e7bC1Ed2Fc551969A2C425AA3480C0ef1",
   "sourceFile": "contracts/spend_court.py",
-  "sourceSha256": "92cc74b056e31bd023093e0c15f8f9fa5c6ab76bfb746E895ED94785E66C0CD0",
-  "sourceCommit": "52464cc782812e0d84e3fcb4329336d7a51e407b",
-  "status": "FINALIZED"
+  "sourceCommit": "d378aff2a192461c1a0221504aaeef263e5146e7",
+  "status": "FINALIZED",
+  "paymentRelay": {
+    "contractAddress": "0x14e3212248f744A0a3D31b0Ba1A78EaAD033F8fD",
+    "deploymentTransaction": "0xcf25f60e9a0d037f781a43a70dd70b3b2a0c315fbd8ae17e7af6124d5ac36075",
+    "sourceFile": "contracts/spendcourt_payment_relay.py",
+    "sourceCommit": "da5c07d9184c25171a013d19ffc05064bedde337",
+    "status": "FINALIZED"
+  }
 }
