@@ -33,8 +33,8 @@ SpendCourt never claims that an internal accounting entry moved money. Funds mov
 
 - Contract source: `contracts/spend_court.py`
 - Interactive application: https://klopp78.github.io/spendcourt-genlayer/
-- Contract explorer: https://explorer-studio.genlayer.com/address/0x6AD907052c0Cbda17d703987E0DAB15f15698807
-- Deployment transaction: https://explorer-studio.genlayer.com/tx/0xde33157b21c1dcbb72aab691796bd4c0de1bfc2f8b3152f3d1891bfbf3b62531
+- Contract explorer: https://explorer-studio.genlayer.com/address/0x02a74A1f39d0d00047833b4DE54B4100baFB2D96
+- Deployment transaction: https://explorer-studio.genlayer.com/tx/0xe4ff35c5e985c6d839e802c766d69ac7bc264c2734da82733265152c9b2f0d36
 - Example materials: `examples/`
 
 ## Verification
