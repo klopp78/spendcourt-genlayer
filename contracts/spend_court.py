@@ -4,6 +4,7 @@
 from genlayer import *
 import hashlib
 import json
+import time
 import typing
 
 MAX_SOURCE_CHARS = 24000
@@ -596,7 +597,8 @@ def _invoice_key(order_id: str, invoice_number: str) -> str:
 
 
 def _now() -> int:
-    return int(gl.block.timestamp)
+    # GenVM pins Python's clock to the transaction datetime for every validator.
+    return int(time.time())
 
 
 def _canonical_json(value) -> str:
