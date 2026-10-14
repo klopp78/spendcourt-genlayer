@@ -1,9 +1,13 @@
 {
   "network": "GenLayer Studio",
-  "contractAddress": "0xA271d91e7bC1Ed2Fc551969A2C425AA3480C0ef1",
+  "contractAddress": "0x7CC6f181F0046E11C80fA21e1862AbD40B20b33c",
   "sourceFile": "contracts/spend_court.py",
-  "sourceCommit": "d378aff2a192461c1a0221504aaeef263e5146e7",
-  "status": "FINALIZED",
+  "sourceCommit": "11429e6c5fc48b5852c4aa9c2dc7a6419e0172b3",
+  "status": "ACCEPTED",
+  "sourceIntegrity": {
+    "paymentReferenceFormat": "studio_transaction_hash_64_hex",
+    "recipientBalanceAndFailedTransferCoverage": "scripts/test-contract-lifecycle.mjs"
+  },
   "paymentRelay": {
     "contractAddress": "0x14e3212248f744A0a3D31b0Ba1A78EaAD033F8fD",
     "deploymentTransaction": "0xcf25f60e9a0d037f781a43a70dd70b3b2a0c315fbd8ae17e7af6124d5ac36075",
