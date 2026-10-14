@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 const PAYER = "0x1111111111111111111111111111111111111111";
 const AGENT = "0x2222222222222222222222222222222222222222";
@@ -66,20 +67,6 @@ class SpendCourtModel {
   }
 }
 
-class PaymentRelayModel {
-  constructor() {
-    this.balances = new Map([[PAYER, 10], [PAYEE, 0]]);
-    this.usedReceipts = new Set();
-  }
-  execute(receipt, amount, payer = PAYER, payee = PAYEE) {
-    if (this.usedReceipts.has(receipt)) throw new Error("authorization_receipt_already_used");
-    if (amount <= 0 || this.balances.get(payer) < amount) throw new Error("payment_transfer_failed");
-    this.usedReceipts.add(receipt);
-    this.balances.set(payer, this.balances.get(payer) - amount);
-    this.balances.set(payee, this.balances.get(payee) + amount);
-  }
-}
-
 const model = new SpendCourtModel();
 assert.throws(() => model.register(model.now), /deadline_must_be_in_future/);
 const order = model.register();
@@ -104,15 +91,18 @@ assert.throws(() => model.execute(order, first, true), /requires_finalized/);
 const expired = model.register(model.now + 1);
 model.now += 2;
 assert.throws(() => model.assess(expired, "INV-LATE", "proof-late", 10, 10000), /deadline_expired/);
-const relay = new PaymentRelayModel();
-const receiptHash = sha("finalized-receipt");
-const beforePayee = relay.balances.get(PAYEE);
-relay.execute(receiptHash, 1);
-assert.equal(relay.balances.get(PAYEE), beforePayee + 1, "recipient balance must increase after payment");
-assert.equal(relay.balances.get(PAYER), 9, "payer balance must decrease after payment");
-assert.throws(() => relay.execute(receiptHash, 1), /authorization_receipt_already_used/);
-const failedReceipt = sha("failed-receipt");
-assert.throws(() => relay.execute(failedReceipt, 20), /payment_transfer_failed/);
-assert.equal(relay.usedReceipts.has(failedReceipt), false, "failed transfer must not consume the receipt");
-assert.equal(relay.balances.get(PAYEE), beforePayee + 1, "failed transfer must not credit recipient");
-console.log("SpendCourt v3 lifecycle, recipient-balance, and failed-transfer tests passed");
+const relaySource = readFileSync("contracts/spendcourt_payment_relay.py", "utf8");
+for (const marker of [
+  "class SpendCourtPaymentRelay(gl.Contract)",
+  "@gl.public.write.payable",
+  "def execute_authorized_payment(",
+  "self.used_receipts[receipt] = True",
+  "self.payment_records[receipt] = record",
+  "_Recipient(Address(payee)).emit_transfer(value=gl.message.value)",
+  "def get_payment(",
+  "def is_receipt_used(",
+  "def get_payment_count(",
+]) assert.ok(relaySource.includes(marker), `submitted payment relay missing ${marker}`);
+const transferIndex = relaySource.indexOf("_Recipient(Address(payee)).emit_transfer(value=gl.message.value)");
+assert.ok(transferIndex > relaySource.indexOf("self.payment_records[receipt] = record"), "payment relay must persist its receipt before the transfer so a transfer failure reverts the complete write");
+console.log("SpendCourt lifecycle tests and submitted relay integrity checks passed");

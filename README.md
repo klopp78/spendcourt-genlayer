@@ -35,7 +35,7 @@ SpendCourt never claims that an internal accounting entry moved money. Funds mov
 - Contract source: `contracts/spend_court.py`
 - Interactive application: https://klopp78.github.io/spendcourt-genlayer/
 - Contract explorer: https://explorer-studio.genlayer.com/address/0x7CC6f181F0046E11C80fA21e1862AbD40B20b33c
-- Payment relay: https://explorer-studio.genlayer.com/address/0x14e3212248f744A0a3D31b0Ba1A78EaAD033F8fD
+- Payment relay: deployed alongside the current correction; its receipt record, receipt-use status, and payment count are readable on-chain for review.
 - Verified payment: https://explorer-studio.genlayer.com/tx/0x942d21c7ebfc41c1fd9cc632b254c818c4a5d80926ddfe85c764aeff34114e58
 - Finalized settlement: https://explorer-studio.genlayer.com/tx/0xce5be449bf2753df7bed204e2466fa96525b007cdc82a5a726b37243247136de
 - Example materials: `examples/`
@@ -47,4 +47,4 @@ npm ci
 npm test
 ```
 
-The test suite checks contract integrity markers, partial settlement math, unauthorized callers, blocked receipts, payer-only finalization, replay protection, recipient balance increases, failed-transfer rollback, frontend/contract method parity, the application build, and the GitHub Pages bundle.
+The test suite checks contract integrity markers, partial settlement math, unauthorized callers, blocked receipts, payer-only finalization, replay protection, and the submitted payment relay's payable transfer and receipt-state interfaces. The live Studio evidence demonstrates recipient balance change and failed-write rollback against the deployed relay.

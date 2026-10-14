@@ -17,6 +17,7 @@ class SpendCourtPaymentRelay(gl.Contract):
     payment_count: u64
     latest_payment: str
     used_receipts: TreeMap[str, bool]
+    payment_records: TreeMap[str, str]
 
     def __init__(self):
         self.payment_count = u64(0)
@@ -56,10 +57,23 @@ class SpendCourtPaymentRelay(gl.Contract):
         self.used_receipts[receipt] = True
         self.payment_count = u64(int(self.payment_count) + 1)
         self.latest_payment = record
+        self.payment_records[receipt] = record
         # The transfer is the settlement action; a failed transfer reverts this whole write.
         _Recipient(Address(payee)).emit_transfer(value=gl.message.value)
 
     @gl.public.view
     def get_latest_payment(self) -> str:
         return self.latest_payment
+
+    @gl.public.view
+    def get_payment(self, authorization_receipt_hash: str) -> str:
+        return self.payment_records.get(authorization_receipt_hash.strip().lower(), "")
+
+    @gl.public.view
+    def is_receipt_used(self, authorization_receipt_hash: str) -> bool:
+        return self.used_receipts.get(authorization_receipt_hash.strip().lower(), False)
+
+    @gl.public.view
+    def get_payment_count(self) -> u64:
+        return self.payment_count
 
