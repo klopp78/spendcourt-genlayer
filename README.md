@@ -11,7 +11,7 @@ A conventional smart contract can enforce a numeric cap but cannot decide whethe
 1. `register_order` fetches and commits the mandate, acceptance policy, and repository baseline.
 2. `assess_delivery` independently renders four evidence sources and compares every consequential verdict field across validators.
 3. `finalize_receipt` lets only the payer reserve budget for a positive assessment.
-4. `execute_settlement` cross-checks a commit-pinned payment manifest with the authoritative Studio Explorer transaction against payer, payee, amount, currency, and authorization receipt before recording settlement.
+4. `execute_settlement` cross-checks a commit-pinned payment manifest plus an exact 64-hex Studio transaction hash against payer, payee, amount, currency, and authorization receipt before recording settlement.
 
 Completion is quantized to `0`, `25%`, `50%`, `75%`, or `100%`. The authorized amount is deterministically capped by the requested amount and remaining order budget.
 
@@ -26,6 +26,7 @@ Completion is quantized to `0`, `25%`, `50%`, `75%`, or `100%`. The authorized a
 - strict JSON boolean parsing and consistency rules for every positive verdict
 - complete commit-pinned evidence snapshots with no silent source truncation
 - exact GenVM `FINISHED_WITH_RETURN` checks and `LATEST_FINAL` readback in the application
+- explicit 40-hex Git commit references and 64-hex Studio transaction references, with their types bound into validator evidence commitments
 
 SpendCourt never claims that an internal accounting entry moved money. Funds move through an external payment rail; the contract records settlement only after validators authenticate the resulting execution proof.
 
@@ -46,4 +47,4 @@ npm ci
 npm test
 ```
 
-The test suite checks contract integrity markers, partial settlement math, unauthorized callers, blocked receipts, payer-only finalization, replay protection, frontend/contract method parity, the application build, and the GitHub Pages bundle.
+The test suite checks contract integrity markers, partial settlement math, unauthorized callers, blocked receipts, payer-only finalization, replay protection, recipient balance increases, failed-transfer rollback, frontend/contract method parity, the application build, and the GitHub Pages bundle.

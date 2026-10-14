@@ -56,6 +56,7 @@ class SpendCourtPaymentRelay(gl.Contract):
         self.used_receipts[receipt] = True
         self.payment_count = u64(int(self.payment_count) + 1)
         self.latest_payment = record
+        # The transfer is the settlement action; a failed transfer reverts this whole write.
         _Recipient(Address(payee)).emit_transfer(value=gl.message.value)
 
     @gl.public.view

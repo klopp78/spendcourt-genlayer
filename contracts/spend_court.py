@@ -392,6 +392,7 @@ Complete delivery evidence: {_canonical_json(snapshots)}
 def _verify_payment_execution(order: dict, assessment: dict, sources) -> str:
     snapshots = _render_sources(sources)
     payment_bundle_hash = _sha256(_canonical_json(_snapshot_commitments(sources, snapshots)))
+    transaction_reference = sources[1]["source_revision"]
     prompt = f"""
 Verify a downstream payment execution record for a noncustodial authorization protocol.
 Return only minified JSON with keys: payment_verified, payer_match, payee_match, amount_match,
@@ -401,6 +402,8 @@ and the commit-pinned manifest plus authoritative Studio Explorer transaction pr
 successful, non-reverted payment from payer
 {order['payer']} to payee {order['payee']} for exactly {assessment['authorized_amount']}
 {order['currency']}, tied to authorization receipt {assessment['authorization_receipt_hash']}.
+The Studio transaction reference must be the exact 64-hex transaction hash
+{transaction_reference}. Do not accept a payment unless the Explorer snapshot is for that hash.
 payment_snapshot_hash must equal {payment_bundle_hash}.
 
 Complete payment evidence: {_canonical_json(snapshots)}
@@ -501,7 +504,8 @@ def _render_sources(sources):
 def _snapshot_commitments(sources, snapshots):
     return [{
         "source_index": source["source_index"], "source_type": source["source_type"],
-        "host": source["host"], "source_revision": source["source_revision"],
+        "host": source["host"], "source_reference_type": source["source_reference_type"],
+        "source_revision": source["source_revision"],
         "canonical_url": source["canonical_url"], "url_hash": source["url_hash"],
         "snapshot_hash": snapshot["snapshot_hash"], "snapshot_chars": snapshot["snapshot_chars"],
         "complete": snapshot["complete"],
@@ -533,21 +537,30 @@ def _source(index: int, source_type: str, raw_url: str) -> dict:
     host = host.lower()
     parts = [part for part in path.split("/") if part]
     revision = ""
+    reference_type = ""
     if host == "github.com" and len(parts) >= 5 and parts[2] in ("blob", "tree"):
         revision = parts[3].lower()
+        reference_type = "git_commit"
     elif host == "raw.githubusercontent.com" and len(parts) >= 4:
         revision = parts[2].lower()
+        reference_type = "git_commit"
     elif host == "explorer-studio.genlayer.com" and len(parts) == 2 and parts[0] == "tx":
         revision = parts[1].lower().removeprefix("0x")
-    if len(revision) != 40 or any(char not in "0123456789abcdef" for char in revision):
-        raise Exception("source_requires_immutable_git_commit_url")
+        reference_type = "studio_transaction_hash"
+    if reference_type == "git_commit" and len(revision) != 40:
+        raise Exception("source_requires_40_hex_git_commit")
+    if reference_type == "studio_transaction_hash" and len(revision) != 64:
+        raise Exception("source_requires_64_hex_studio_transaction")
+    if reference_type == "" or any(char not in "0123456789abcdef" for char in revision):
+        raise Exception("source_requires_immutable_reference")
     if host == "github.com" and parts[2] == "blob":
         host = "raw.githubusercontent.com"
         parts = [parts[0], parts[1], parts[3]] + parts[4:]
     canonical = "https://" + host + "/" + "/".join(parts)
     return {
         "source_index": index, "source_type": source_type, "host": host,
-        "source_revision": revision, "canonical_url": canonical, "url_hash": _sha256(canonical),
+        "source_reference_type": reference_type, "source_revision": revision,
+        "canonical_url": canonical, "url_hash": _sha256(canonical),
     }
 
 
