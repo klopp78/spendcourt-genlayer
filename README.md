@@ -35,8 +35,11 @@ SpendCourt never claims that an internal accounting entry moved money. Funds mov
 - Contract source: `contracts/spend_court.py`
 - Interactive application: https://klopp78.github.io/spendcourt-genlayer/
 - Contract explorer: https://explorer-studio.genlayer.com/address/0x7CC6f181F0046E11C80fA21e1862AbD40B20b33c
-- Payment relay: deployed alongside the current correction; its receipt record, receipt-use status, and payment count are readable on-chain for review.
-- Verified payment: https://explorer-studio.genlayer.com/tx/0x942d21c7ebfc41c1fd9cc632b254c818c4a5d80926ddfe85c764aeff34114e58
+- Payment relay: https://explorer-studio.genlayer.com/address/0x699FeD986a887842c164c5B69C2dE75255970C7A
+- Verified 1 GEN relay payment: https://explorer-studio.genlayer.com/tx/0xa959d786d78909b98be88b5ebbb010920f8d60f185da2ff863f22ee4ca20607b
+- Live receipt readback: `get_payment` returns the payer, payee, and `1000000000000000000` wei amount for receipt `6fbc4ae0071bcc2c7c0e99d1c2bb4b8698ec989cb291fc7bdc7fd6dba1898251`; `is_receipt_used` returns `true`; `get_payment_count` returns `1`.
+- Zero-value rejection check: https://explorer-studio.genlayer.com/tx/0x146c8e7ba83739c8cb13a10a0094af36fb47ec2675d25f4bf5823062540664fd
+- Rejection-state readback: receipt `ad8e4217f392a1e8b5b4bd96e0448b6d78691cef848d543487ac07886f9e65ac` remains unused and `get_payment_count` remains `1`.
 - Finalized settlement: https://explorer-studio.genlayer.com/tx/0xce5be449bf2753df7bed204e2466fa96525b007cdc82a5a726b37243247136de
 - Example materials: `examples/`
 
@@ -47,4 +50,4 @@ npm ci
 npm test
 ```
 
-The test suite checks contract integrity markers, partial settlement math, unauthorized callers, blocked receipts, payer-only finalization, replay protection, and the submitted payment relay's payable transfer and receipt-state interfaces. The live Studio evidence demonstrates recipient balance change and failed-write rollback against the deployed relay.
+The test suite checks contract integrity markers, partial settlement math, unauthorized callers, blocked receipts, payer-only finalization, replay protection, and the submitted payment relay's payable transfer and receipt-state interfaces. Live Studio readbacks verify the accepted 1 GEN relay record and that a zero-value rejected invocation does not consume a receipt or increment the payment count.
